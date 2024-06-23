@@ -1,11 +1,11 @@
 /*
-      Programa para RX de um controle RF com módulo NRF24L01 - RECEPTOR
+      Emitter NRF24L01 and PS2 controller
 
-      Componentes:
+      Components:
         - Arduino Uno;
-        - Módulo NRF24L01 com adaptador;
+        - NRF24L01;
 
-      Pinos:
+      Pinout:
       RF      UNO
       CE      9
       CSN     10
@@ -13,15 +13,8 @@
       MISO    12
       MOSI    11
 
-      Versão 1.0 - Versão inicial com leitura multicanais de dados recebidos via rádio - 15/mai/2021; programa base fonte: by Dejan Nedelkovski, www.HowToMechatronics.com
-             2.0 - Versão de teste do controle de PS2 - 05/06/21
 
- *    * Criado por Cleber Borges - FunBots - @cleber.funbots  *     *
 
-      Instagram: https://www.instagram.com/cleber.funbots/
-      Facebook: https://www.facebook.com/cleber.funbots
-      YouTube: https://www.youtube.com/c/funbots
-      Telegram: https://t.me/cleberfunbots
 
 */
 
@@ -32,7 +25,7 @@
 #include <RF24.h>
 
 
-// Pinos do controle para o Arduino
+// PS2 pins
 
 #define PS2_DAT        4 // DI    
 #define PS2_CMD        3 // DO
@@ -63,7 +56,7 @@ uint64_t address[6] = {0x7878787878LL,
 #define pressures   false
 #define rumble      false
 
-PS2X ps2x; // cria variável para receber dados do controle
+PS2X ps2x; // Create a variable to receive data from the control
 
 int error = 0;
 byte type = 0;
@@ -73,9 +66,9 @@ void setup() {
 
   Serial.begin(57600);
 
-  delay(300);  //added delay to give wireless ps2 module some time to startup, before configuring it
+  delay(300);  //Added delay to give wireless ps2 module some time to startup, before configuring it
 
-  //setup pins and settings: GamePad(clock, command, attention, data, Pressures?, Rumble?) check for error
+  //Setup pins and settings: GamePad(clock, command, attention, data, Pressures?, Rumble?) check for error
   error = ps2x.config_gamepad(PS2_CLK, PS2_CMD, PS2_SEL, PS2_DAT, pressures, rumble);
 
   // Inicia Controle
@@ -104,7 +97,7 @@ void setup() {
   else if (error == 3)
     Serial.println("Controller refusing to enter Pressures mode, may not support it. ");
 
-  // Informa tipo de controle
+  // Inform control type
   type = ps2x.readType();
   switch (type) {
     case 0:
@@ -121,10 +114,9 @@ void setup() {
       break;
   }
 
-  // Inicia Radio
+  // Initialize Radio
   radio.begin();
   radio.setPALevel(RF24_PA_LOW);
-  //radio.setChannel(76);
   radio.stopListening();
   radio.openWritingPipe(address[0]);
 
@@ -132,9 +124,9 @@ void setup() {
 
 void loop() {
 
-  ps2x.read_gamepad(false, vibrate); // Le dados do controle
+  ps2x.read_gamepad(false, vibrate); // Read data from the control
 
-  // Checa cada botão e grava na variavel para ser enviada por RF
+  // Check each button and save it in the variable to be sent via RF
   if (ps2x.Button(PSB_START))   {
     bitWrite(joystickData.buttons1, 0, 1);
   } else {
@@ -243,14 +235,14 @@ void loop() {
     bitWrite(joystickData.buttons2, 7, 0);
   }
 
-  // Recebe dados dos analógicos
+  // Receive data from the analog inputs
   joystickData.potLY = ps2x.Analog(PSS_LY);
   joystickData.potLX = ps2x.Analog(PSS_LX);
   joystickData.potRY = ps2x.Analog(PSS_RY);
   joystickData.potRX = ps2x.Analog(PSS_RX);
 
 
-  // Envia dados via RF
+  // Send data via RF
   radio.write(&joystickData, sizeof(joystick));
   delay(50);
 
